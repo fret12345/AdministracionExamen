@@ -2,10 +2,10 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from src.use_cases.get_financial_data import ObtenerDatosSiboifUseCase
+from src.ports.financial_repository import GetFinancialDataUseCasePort
 
 @st.cache_data(show_spinner="Cargando datos de Siboif...")
-def load_data_from_use_case(_use_case: ObtenerDatosSiboifUseCase):
+def load_data_from_use_case(_use_case: GetFinancialDataUseCasePort):
     records, es_fallback = _use_case.ejecutar()
     if not records:
         return pd.DataFrame(), es_fallback
@@ -19,7 +19,7 @@ def load_data_from_use_case(_use_case: ObtenerDatosSiboifUseCase):
     df['valor1'] = pd.to_numeric(df['valor1'], errors='coerce').fillna(0)
     return df, es_fallback
 
-def render_ui(use_case: ObtenerDatosSiboifUseCase):
+def render_ui(use_case: GetFinancialDataUseCasePort):
     # Configuración inicial de la página
     st.set_page_config(
         page_title="Dashboard SIBOIF Analytics",

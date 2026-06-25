@@ -2,16 +2,30 @@ import sqlite3
 from typing import List
 from src.ports.financial_repository import FinancialRepository
 from src.domain.models import SiboifRecord
+from src.domain.exceptions import DatabaseConnectionError
 
 class SqliteFinancialAdapter(FinancialRepository):
+    """
+    Adaptador de salida para la persistencia local en una base de datos SQLite.
+    
+    Principios de diseño:
+    - SRP: Su única responsabilidad es comunicarse con la base de datos local y ejecutar consultas SQL.
+    - LSP: Sustituye correctamente a FinancialRepository sin alterar el comportamiento esperado por el cliente.
+    """
     def __init__(self, db_path: str = "Siboif.db"):
         self.db_path = db_path
 
     def get_all(self) -> List[SiboifRecord]:
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        """
+        Consulta la base de datos local SQLite y reconstruye la lista de entidades SiboifRecord.
+        Garantiza el cierre seguro de la conexión y mapea errores SQL a excepciones de dominio.
+        """
+        conn = None
         try:
-            # Consulta JOIN optimizada para reconstruir la estructura denormalizada
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # Consulta JOIN optimizada para reconstruir la estructura del dominio
             cursor.execute("""
                 SELECT 
                     i.intendencia,
@@ -44,11 +58,14 @@ class SqliteFinancialAdapter(FinancialRepository):
                     variable1=r[6],
                     valor1=r[7],
                     Anio=r[8],
-                    Mes=r[9],
-                    variable2=None,
-                    variable3=None,
-                    valor2=None
+                    Mes=r[9]
                 ))
             return records
+        except sqlite3.Error as e:
+            # Encapsula excepciones de infraestructura SQLite a nivel de dominio
+            raise DatabaseConnectionError(
+                f"Error de infraestructura de base de datos local al obtener registros: {e}"
+            ) from e
         finally:
-            conn.close()
+            if conn is not None:
+                conn.close()
